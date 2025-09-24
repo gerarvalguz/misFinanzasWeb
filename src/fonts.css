@@ -1,0 +1,23 @@
+@font-face {
+    font-family: 'Grotte';
+    src: url('https://assets.website-files.com/6154826427435d71e3d228e3/6154826427435d5189d22960_Grotte-Regular.woff') format('woff');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Grotte';
+    src: url('https://assets.website-files.com/6154826427435d71e3d228e3/6154826427435d6451d2295d_Grotte-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Grotte';
+    src: url('https://assets.website-files.com/6154826427435d71e3d228e3/6154826427435d135dd2295c_Grotte-Bold.woff') format('woff');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}

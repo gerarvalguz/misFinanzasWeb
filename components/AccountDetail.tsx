@@ -1,12 +1,16 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Account, Transaction, TransactionType } from '../types';
-import { PlusIcon, PencilIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from './icons';
+import { PlusIcon, PencilIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, GripVerticalIcon } from './icons';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface AccountDetailProps {
   account: Account | null;
   onAddTransaction: (type: TransactionType) => void;
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (accountId: string, transactionId: string) => void;
+  onReorderTransactions: (accountId: string, activeId: string, overId: string) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -19,35 +23,84 @@ interface TransactionRowProps {
   onDelete: (transactionId: string) => void;
 }
 
-const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, onEdit, onDelete }) => {
-  const isIncome = transaction.type === TransactionType.INCOME;
-  return (
-    <li className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-md transition-colors">
-      <div className="flex items-center space-x-4">
-        <span className={`flex items-center justify-center w-8 h-8 rounded-full ${isIncome ? 'bg-green-100 text-success' : 'bg-red-100 text-danger'}`}>
-          {isIncome ? <ArrowUpIcon className="w-5 h-5" /> : <ArrowDownIcon className="w-5 h-5" />}
-        </span>
-        <div>
-          <p className="text-sm font-medium text-gray-800">{transaction.description}</p>
-          <p className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-        </div>
-      </div>
-      <div className="flex items-center space-x-4">
-        <p className={`text-sm font-semibold ${isIncome ? 'text-success' : 'text-danger'}`}>
-          {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
-        </p>
-        <button onClick={() => onEdit(transaction)} className="text-gray-400 hover:text-accent transition-colors" aria-label={`Editar transacción ${transaction.description}`}>
-          <PencilIcon className="w-4 h-4" />
-        </button>
-        <button onClick={() => onDelete(transaction.id)} className="text-gray-400 hover:text-danger transition-colors" aria-label={`Eliminar transacción ${transaction.description}`}>
-          <TrashIcon className="w-4 h-4" />
-        </button>
-      </div>
-    </li>
-  );
+const SortableTransactionRow: React.FC<TransactionRowProps> = ({ transaction, onEdit, onDelete }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: transaction.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : undefined,
+        opacity: isDragging ? 0.8 : 1,
+    };
+
+    const isIncome = transaction.type === TransactionType.INCOME;
+
+    return (
+        <li 
+            ref={setNodeRef} 
+            style={style} 
+            {...attributes}
+            className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-md transition-colors bg-white"
+        >
+            <div className="flex items-center space-x-2">
+                <button {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600 p-1" aria-label="Reordenar transacción">
+                    <GripVerticalIcon className="w-5 h-5" />
+                </button>
+                <span className={`flex items-center justify-center w-8 h-8 rounded-full ${isIncome ? 'bg-green-100 text-success' : 'bg-red-100 text-danger'}`}>
+                  {isIncome ? <ArrowUpIcon className="w-5 h-5" /> : <ArrowDownIcon className="w-5 h-5" />}
+                </span>
+                <div>
+                    <p className="text-sm font-medium text-gray-800">{transaction.description}</p>
+                    <p className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                </div>
+            </div>
+            <div className="flex items-center space-x-4">
+                <p className={`text-sm font-semibold ${isIncome ? 'text-success' : 'text-danger'}`}>
+                    {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
+                </p>
+                <button onClick={() => onEdit(transaction)} className="text-gray-400 hover:text-accent transition-colors" aria-label={`Editar transacción ${transaction.description}`}>
+                    <PencilIcon className="w-4 h-4" />
+                </button>
+                <button onClick={() => onDelete(transaction.id)} className="text-gray-400 hover:text-danger transition-colors" aria-label={`Eliminar transacción ${transaction.description}`}>
+                    <TrashIcon className="w-4 h-4" />
+                </button>
+            </div>
+        </li>
+    );
 };
 
-const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction, onEditTransaction, onDeleteTransaction }) => {
+
+const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction, onEditTransaction, onDeleteTransaction, onReorderTransactions }) => {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDelete = useCallback((transactionId: string) => {
+    if (account) {
+        onDeleteTransaction(account.id, transactionId);
+    }
+  }, [account, onDeleteTransaction]);
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (account && active.id !== over.id) {
+      onReorderTransactions(account.id, active.id, over.id);
+    }
+  };
+
+  const transactionIds = useMemo(() => account?.transactions.map(t => t.id) ?? [], [account?.transactions]);
+
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-surface text-center p-8 rounded-lg shadow-lg">
@@ -59,14 +112,6 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
       </div>
     );
   }
-
-  const handleDelete = useCallback((transactionId: string) => {
-    if (account) {
-        onDeleteTransaction(account.id, transactionId);
-    }
-  }, [account, onDeleteTransaction]);
-
-  const sortedTransactions = [...account.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div className="bg-surface rounded-lg shadow-lg h-full flex flex-col">
@@ -92,17 +137,21 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
         </div>
       </div>
       <div className="flex-grow overflow-y-auto p-4">
-        {sortedTransactions.length === 0 ? (
+        {account.transactions.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500">Esta cuenta no tiene transacciones.</p>
             <p className="text-gray-400 text-sm mt-1">Añade un ingreso o un gasto para empezar.</p>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {sortedTransactions.map((transaction) => (
-              <TransactionRow key={transaction.id} transaction={transaction} onEdit={onEditTransaction} onDelete={handleDelete} />
-            ))}
-          </ul>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={transactionIds} strategy={verticalListSortingStrategy}>
+              <ul className="space-y-2">
+                {account.transactions.map((transaction) => (
+                  <SortableTransactionRow key={transaction.id} transaction={transaction} onEdit={onEditTransaction} onDelete={handleDelete} />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>

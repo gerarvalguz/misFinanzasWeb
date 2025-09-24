@@ -119,6 +119,32 @@ const App: React.FC = () => {
             return acc;
         }));
     }, [setAccounts]);
+
+    const handleReorderTransactions = useCallback((accountId: string, activeId: string, overId: string) => {
+        if (activeId === overId) return;
+    
+        setAccounts(prevAccounts => {
+            const accountIndex = prevAccounts.findIndex(acc => acc.id === accountId);
+            if (accountIndex === -1) return prevAccounts;
+
+            const account = prevAccounts[accountIndex];
+            const oldIndex = account.transactions.findIndex(t => t.id === activeId);
+            const newIndex = account.transactions.findIndex(t => t.id === overId);
+
+            if (oldIndex === -1 || newIndex === -1) return prevAccounts;
+
+            const newTransactions = Array.from(account.transactions);
+            const [movedItem] = newTransactions.splice(oldIndex, 1);
+            newTransactions.splice(newIndex, 0, movedItem);
+            
+            const updatedAccount = { ...account, transactions: newTransactions };
+            
+            const newAccounts = [...prevAccounts];
+            newAccounts[accountIndex] = updatedAccount;
+            
+            return newAccounts;
+        });
+    }, [setAccounts]);
     
     const totalBalance = useMemo(() => {
         return accounts.reduce((total, account) => {
@@ -169,6 +195,7 @@ const App: React.FC = () => {
                             onAddTransaction={handleAddTransactionClick}
                             onEditTransaction={handleEditTransaction}
                             onDeleteTransaction={handleDeleteTransaction}
+                            onReorderTransactions={handleReorderTransactions}
                         />
                     </div>
                 </div>
