@@ -1,0 +1,5 @@
+{
+  "name": "Gestor de Gastos Personales",
+  "description": "Una aplicación para registrar y gestionar tus ingresos y gastos personales por cuentas. Realiza un seguimiento de tus finanzas, edita y elimina transacciones y cuentas para mantener un control claro de tu dinero.",
+  "requestFramePermissions": []
+}
