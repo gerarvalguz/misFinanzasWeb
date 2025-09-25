@@ -7,8 +7,63 @@ import Modal from './components/Modal';
 import AccountForm from './components/AccountForm';
 import TransactionForm from './components/TransactionForm';
 import { PlusIcon } from './components/icons';
+import { arrayMove } from '@dnd-kit/sortable';
 
 const App: React.FC = () => {
+    const handleExportData = () => {
+        try {
+            const dataToExport = {
+                accounts: JSON.parse(localStorage.getItem('accounts') || '[]'),
+                selectedAccountId: JSON.parse(localStorage.getItem('selectedAccountId') || 'null'),
+            };
+            const jsonData = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'gastos-personales-backup.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Error exporting data:", error);
+            alert("Hubo un error al exportar los datos.");
+        }
+    };
+
+    const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e: ProgressEvent<FileReader>) => {
+            try {
+                const result = e.target?.result as string;
+                if (!result) throw new Error("El archivo está vacío.");
+
+                const importedData = JSON.parse(result);
+
+                if (importedData && Array.isArray(importedData.accounts)) {
+                    if (window.confirm("¿Estás seguro? Esto reemplazará todos tus datos actuales.")) {
+                        localStorage.setItem('accounts', JSON.stringify(importedData.accounts));
+                        localStorage.setItem('selectedAccountId', JSON.stringify(importedData.selectedAccountId || null));
+                        alert("Datos importados con éxito. La aplicación se recargará.");
+                        window.location.reload();
+                    }
+                } else {
+                    alert("El archivo de importación no tiene el formato correcto.");
+                }
+            } catch (error) {
+                console.error("Error al importar datos:", error);
+                alert("Hubo un error al procesar el archivo. Asegúrate de que sea un archivo de respaldo válido.");
+            } finally {
+                event.target.value = ''; // Permite volver a seleccionar el mismo archivo
+            }
+        };
+        reader.readAsText(file);
+    };
+
     const [accounts, setAccounts] = useLocalStorage<Account[]>('accounts', []);
     const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
@@ -120,6 +175,18 @@ const App: React.FC = () => {
         }));
     }, [setAccounts]);
 
+    const handleReorderAccounts = useCallback((activeId: string, overId: string) => {
+        if (activeId === overId) return;
+    
+        setAccounts(items => {
+            const oldIndex = items.findIndex(item => item.id === activeId);
+            const newIndex = items.findIndex(item => item.id === overId);
+            if (oldIndex === -1 || newIndex === -1) return items;
+
+            return arrayMove(items, oldIndex, newIndex);
+        });
+    }, [setAccounts]);
+
     const handleReorderTransactions = useCallback((accountId: string, activeId: string, overId: string) => {
         if (activeId === overId) return;
     
@@ -155,10 +222,10 @@ const App: React.FC = () => {
     }, [accounts]);
 
     return (
-        <div className="min-h-screen bg-gray-100 font-sans">
+        <div className="min-h-screen bg-background font-sans">
             <header className="bg-primary shadow-md">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-onPrimary">Gestor de Gastos</h1>
+                    <h1 className="text-2xl font-bold text-onPrimary">Mis Finanzas Web</h1>
                      <div className="text-right">
                         <span className="text-sm text-blue-200">Balance Total</span>
                         <p className={`text-xl font-bold ${totalBalance >= 0 ? 'text-white' : 'text-red-300'}`}>
@@ -166,6 +233,17 @@ const App: React.FC = () => {
                         </p>
                     </div>
                 </div>
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 pb-2 flex justify-end items-center space-x-2">
+                  <input
+                      type="file"
+                      id="import"
+                      accept="application/json"
+                      onChange={handleImportData}
+                      className="hidden"
+                  />
+                  <label htmlFor="import" className="bg-secondary text-white py-2 px-4 rounded cursor-pointer hover:bg-blue-700 transition-colors text-sm">Importar</label>
+                  <button onClick={handleExportData} className="bg-secondary text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors text-sm">Exportar</button>
+               </div>
             </header>
 
             <main className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -187,6 +265,7 @@ const App: React.FC = () => {
                             onEditAccount={handleEditAccount}
                             onDeleteAccount={handleDeleteAccount}
                             selectedAccountId={selectedAccountId}
+                            onReorderAccounts={handleReorderAccounts}
                         />
                     </div>
                     <div className="lg:col-span-2">
