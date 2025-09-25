@@ -9,6 +9,10 @@ import TransactionForm from './components/TransactionForm';
 import { PlusIcon } from './components/icons';
 import { arrayMove } from '@dnd-kit/sortable';
 
+type AccountSortKey = 'name' | 'balance' | 'income' | 'expense';
+type TransactionSortKey = 'description' | 'amount' | 'date';
+type SortDirection = 'asc' | 'desc';
+
 const App: React.FC = () => {
     const handleExportData = () => {
         try {
@@ -66,6 +70,9 @@ const App: React.FC = () => {
 
     const [accounts, setAccounts] = useLocalStorage<Account[]>('accounts', []);
     const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+    const [accountSearchTerm, setAccountSearchTerm] = useState('');
+    const [accountSortConfig, setAccountSortConfig] = useState<{ key: AccountSortKey; direction: SortDirection } | null>(null);
+    const [transactionSearchTerm, setTransactionSearchTerm] = useState('');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalContent, setModalContent] = useState<'account' | 'transaction' | null>(null);
@@ -79,6 +86,73 @@ const App: React.FC = () => {
         return accounts.find(acc => acc.id === selectedAccountId) || null;
     }, [accounts, selectedAccountId]);
 
+    const calculateAccountSummary = useCallback((account: Account) => {
+        const income = account.transactions
+            .filter(t => t.type === TransactionType.INCOME)
+            .reduce((sum, t) => sum + t.amount, 0);
+        const expense = account.transactions
+            .filter(t => t.type === TransactionType.EXPENSE)
+            .reduce((sum, t) => sum + t.amount, 0);
+        return { income, expense, balance: income - expense };
+    }, []);
+
+    const sortedAndFilteredAccounts = useMemo(() => {
+        let filtered = accounts;
+        if (!accountSearchTerm.trim()) {
+            filtered = accounts;
+        } else {
+            filtered = accounts.filter(account =>
+                account.name.toLowerCase().includes(accountSearchTerm.toLowerCase())
+            );
+        }
+
+        if (accountSortConfig !== null) {
+            const sortableAccounts = [...filtered];
+            sortableAccounts.sort((a, b) => {
+                let aValue, bValue;
+
+                if (accountSortConfig.key === 'name') {
+                    aValue = a.name.toLowerCase();
+                    bValue = b.name.toLowerCase();
+                } else {
+                    const aSummary = calculateAccountSummary(a);
+                    const bSummary = calculateAccountSummary(b);
+                    aValue = aSummary[sortConfig.key];
+                    bValue = bSummary[sortConfig.key];
+                }
+
+                if (aValue < bValue) {
+                    return accountSortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return accountSortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+            return sortableAccounts;
+        }
+        return filtered;
+    }, [accounts, accountSearchTerm, accountSortConfig, calculateAccountSummary]);
+
+    const processedSelectedAccount = useMemo(() => {
+        if (!selectedAccount) return null;
+
+        let transactions = [...selectedAccount.transactions];
+
+        // Filter transactions
+        if (transactionSearchTerm.trim()) {
+            transactions = transactions.filter(t => 
+                t.description.toLowerCase().includes(transactionSearchTerm.toLowerCase())
+            );
+        }
+
+        // Default sort by date descending
+        transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        return { ...selectedAccount, transactions };
+
+    }, [selectedAccount, transactionSearchTerm]);
+
     const handleOpenModal = useCallback((content: 'account' | 'transaction') => {
         setModalContent(content);
         setIsModalOpen(true);
@@ -90,6 +164,16 @@ const App: React.FC = () => {
         setTransactionToEdit(null);
         setModalContent(null);
     }, []);
+
+    const handleSortAccounts = useCallback((key: AccountSortKey) => {
+        setAccountSortConfig(prevConfig => {
+            if (prevConfig && prevConfig.key === key && prevConfig.direction === 'asc') {
+                return { key, direction: 'desc' };
+            }
+            return { key, direction: 'asc' };
+        });
+    }, []);
+
 
     // Account Handlers
     const handleAddAccount = useCallback((name: string) => {
@@ -200,15 +284,9 @@ const App: React.FC = () => {
 
             if (oldIndex === -1 || newIndex === -1) return prevAccounts;
 
-            const newTransactions = Array.from(account.transactions);
-            const [movedItem] = newTransactions.splice(oldIndex, 1);
-            newTransactions.splice(newIndex, 0, movedItem);
-            
-            const updatedAccount = { ...account, transactions: newTransactions };
-            
+            const newTransactions = arrayMove(account.transactions, oldIndex, newIndex);
             const newAccounts = [...prevAccounts];
-            newAccounts[accountIndex] = updatedAccount;
-            
+            newAccounts[accountIndex] = { ...account, transactions: newTransactions };
             return newAccounts;
         });
     }, [setAccounts]);
@@ -247,8 +325,8 @@ const App: React.FC = () => {
             </header>
 
             <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                    <div className="lg:col-span-3">
+                 <div className="grid grid-cols-1 lg:grid-cols-[minmax(600px,_1.5fr)_1fr] gap-8">
+                    <div>
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-semibold text-gray-700">Resumen de Cuentas</h2>
                              <button
@@ -259,22 +337,36 @@ const App: React.FC = () => {
                                 <span>Nueva Cuenta</span>
                             </button>
                         </div>
+                        <div className="mb-4">
+                            <input
+                                type="text"
+                                placeholder="Buscar cuenta por nombre..."
+                                value={accountSearchTerm}
+                                onChange={(e) => setAccountSearchTerm(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                            />
+                        </div>
                         <AccountsTable
-                            accounts={accounts}
+                            accounts={sortedAndFilteredAccounts}
                             onSelectAccount={setSelectedAccountId}
                             onEditAccount={handleEditAccount}
                             onDeleteAccount={handleDeleteAccount}
                             selectedAccountId={selectedAccountId}
                             onReorderAccounts={handleReorderAccounts}
+                            onSort={handleSortAccounts}
+                            sortConfig={accountSortConfig}
+                            calculateSummary={calculateAccountSummary}
                         />
                     </div>
-                    <div className="lg:col-span-2">
+                    <div>
                         <AccountDetail
-                            account={selectedAccount}
+                            account={processedSelectedAccount}
                             onAddTransaction={handleAddTransactionClick}
                             onEditTransaction={handleEditTransaction}
                             onDeleteTransaction={handleDeleteTransaction}
                             onReorderTransactions={handleReorderTransactions}
+                            onSearchTransactions={setTransactionSearchTerm}
+                            transactionSearchTerm={transactionSearchTerm}
                         />
                     </div>
                 </div>

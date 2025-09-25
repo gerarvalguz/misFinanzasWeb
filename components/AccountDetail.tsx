@@ -11,6 +11,8 @@ interface AccountDetailProps {
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (accountId: string, transactionId: string) => void;
   onReorderTransactions: (accountId: string, activeId: string, overId: string) => void;
+  onSearchTransactions: (term: string) => void;
+  transactionSearchTerm: string;
 }
 
 const formatCurrency = (amount: number) => {
@@ -77,14 +79,15 @@ const SortableTransactionRow: React.FC<TransactionRowProps> = ({ transaction, on
 };
 
 
-const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction, onEditTransaction, onDeleteTransaction, onReorderTransactions }) => {
+const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction, onEditTransaction, onDeleteTransaction, onReorderTransactions, onSearchTransactions, transactionSearchTerm }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const TRANSACTIONS_PER_PAGE = 5;
 
   useEffect(() => {
-    // Reset page to 1 when account changes
+    // Reset page and search when account changes
     setCurrentPage(1);
-  }, [account?.id]);
+    onSearchTransactions('');
+  }, [account?.id, onSearchTransactions]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -107,18 +110,23 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
     }
   };
 
-  const transactionIds = useMemo(() => account?.transactions.map(t => t.id) ?? [], [account?.transactions]);
-
-  const sortedTransactions = useMemo(() => {
-    if (!account) return [];
-    // Sort by date descending before pagination
-    return [...account.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [account?.transactions]);
-
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * TRANSACTIONS_PER_PAGE;
-    return sortedTransactions.slice(startIndex, startIndex + TRANSACTIONS_PER_PAGE);
-  }, [sortedTransactions, currentPage]);
+    return account?.transactions.slice(startIndex, startIndex + TRANSACTIONS_PER_PAGE) ?? [];
+  }, [account?.transactions, currentPage]);
+  
+  const transactionIds = useMemo(() => paginatedTransactions.map(t => t.id), [paginatedTransactions]);
+
+  const totalTransactions = account?.transactions.length ?? 0;
+  const totalPages = Math.ceil(totalTransactions / TRANSACTIONS_PER_PAGE);
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+  
+  useEffect(() => {
+    // Reset page to 1 when search term changes
+    setCurrentPage(1);
+  }, [transactionSearchTerm]);
 
   if (!account) {
     return (
@@ -155,14 +163,23 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
           </div>
         </div>
       </div>
-      <div className="flex-grow overflow-y-auto p-4 flex flex-col justify-between">
+      <div className="p-4 border-b border-gray-200">
+        <input
+            type="text"
+            placeholder="Buscar transacciones..."
+            value={transactionSearchTerm}
+            onChange={(e) => onSearchTransactions(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary text-sm"
+        />
+      </div>
+      <div className="flex-grow overflow-y-auto p-4 flex flex-col">
         {account.transactions.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-500">Esta cuenta no tiene transacciones.</p>
+            <p className="text-gray-500">{transactionSearchTerm ? 'No se encontraron transacciones.' : 'Esta cuenta no tiene transacciones.'}</p>
             <p className="text-gray-400 text-sm mt-1">Añade un ingreso o un gasto para empezar.</p>
           </div>
         ) : (
-          <>
+          <div className="flex-grow flex flex-col justify-between pt-2">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={transactionIds} strategy={verticalListSortingStrategy}>
                 <ul className="space-y-2">
@@ -172,22 +189,22 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
                 </ul>
               </SortableContext>
             </DndContext>
-            {sortedTransactions.length > TRANSACTIONS_PER_PAGE && (
+            {totalTransactions > TRANSACTIONS_PER_PAGE && (
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} 
                   disabled={currentPage === 1}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >Anterior</button>
-                <span className="text-sm text-gray-500">Página {currentPage} de {Math.ceil(sortedTransactions.length / TRANSACTIONS_PER_PAGE)}</span>
+                <span className="text-sm text-gray-500">Página {currentPage} de {totalPages}</span>
                 <button 
-                  onClick={() => setCurrentPage(p => Math.min(p + 1, Math.ceil(sortedTransactions.length / TRANSACTIONS_PER_PAGE)))}
-                  disabled={currentPage * TRANSACTIONS_PER_PAGE >= sortedTransactions.length}
+                  onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                  disabled={currentPage >= totalPages}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >Siguiente</button>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
