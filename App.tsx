@@ -146,9 +146,6 @@ const App: React.FC = () => {
             );
         }
 
-        // Default sort by date descending
-        transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
         return { ...selectedAccount, transactions };
 
     }, [selectedAccount, transactionSearchTerm]);
@@ -364,7 +361,7 @@ const App: React.FC = () => {
                             onAddTransaction={handleAddTransactionClick}
                             onEditTransaction={handleEditTransaction}
                             onDeleteTransaction={handleDeleteTransaction}
-                            onReorderTransactions={handleReorderTransactions}
+                            onReorderTransactions={handleReorderTransactions as any}
                             onSearchTransactions={setTransactionSearchTerm}
                             transactionSearchTerm={transactionSearchTerm}
                         />

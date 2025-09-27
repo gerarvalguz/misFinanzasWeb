@@ -98,7 +98,7 @@ const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount
     }
   };
 
-  const accountIds = useMemo(() => accounts.map(acc => acc.id), [accounts]);
+  const paginatedAccountIds = useMemo(() => paginatedAccounts.map(acc => acc.id), [paginatedAccounts]);
 
   return (
     <div className="bg-surface rounded-lg shadow-lg overflow-hidden">
@@ -114,7 +114,7 @@ const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount
                         <th scope="col" className="relative px-6 py-3"><span className="sr-only">Acciones</span></th>
                     </tr>
                 </thead>
-                <SortableContext items={accountIds} strategy={verticalListSortingStrategy}>
+                <SortableContext items={paginatedAccountIds} strategy={verticalListSortingStrategy}>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {accounts.length === 0 ? (
                             <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500">No hay cuentas. ¡Crea una para empezar!</td></tr>

@@ -10,7 +10,7 @@ interface AccountDetailProps {
   onAddTransaction: (type: TransactionType) => void;
   onEditTransaction: (transaction: Transaction) => void;
   onDeleteTransaction: (accountId: string, transactionId: string) => void;
-  onReorderTransactions: (accountId: string, activeId: string, overId: string) => void;
+  onReorderTransactions: (accountId: string, activeId: string, overId: string, paginatedTransactions: Transaction[]) => void;
   onSearchTransactions: (term: string) => void;
   transactionSearchTerm: string;
 }
@@ -85,8 +85,8 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
 
   useEffect(() => {
     // Reset page and search when account changes
-    setCurrentPage(1);
     onSearchTransactions('');
+    setCurrentPage(1);
   }, [account?.id, onSearchTransactions]);
 
   const sensors = useSensors(
@@ -106,7 +106,7 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
     if (account && active.id !== over.id) {
-      onReorderTransactions(account.id, active.id, over.id);
+      onReorderTransactions(account.id, active.id, over.id, paginatedTransactions);
     }
   };
 
@@ -115,7 +115,7 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
     return account?.transactions.slice(startIndex, startIndex + TRANSACTIONS_PER_PAGE) ?? [];
   }, [account?.transactions, currentPage]);
   
-  const transactionIds = useMemo(() => paginatedTransactions.map(t => t.id), [paginatedTransactions]);
+  const paginatedTransactionIds = useMemo(() => paginatedTransactions.map(t => t.id), [paginatedTransactions]);
 
   const totalTransactions = account?.transactions.length ?? 0;
   const totalPages = Math.ceil(totalTransactions / TRANSACTIONS_PER_PAGE);
@@ -124,10 +124,8 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
   }, [currentPage, totalPages]);
   
   useEffect(() => {
-    // Reset page to 1 when search term changes
     setCurrentPage(1);
   }, [transactionSearchTerm]);
-
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-surface text-center p-8 rounded-lg shadow-lg">
@@ -181,7 +179,7 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
         ) : (
           <div className="flex-grow flex flex-col justify-between pt-2">
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={transactionIds} strategy={verticalListSortingStrategy}>
+              <SortableContext items={paginatedTransactionIds} strategy={verticalListSortingStrategy}>
                 <ul className="space-y-2">
                   {paginatedTransactions.map((transaction) => (
                     <SortableTransactionRow key={transaction.id} transaction={transaction} onEdit={onEditTransaction} onDelete={handleDelete} />
