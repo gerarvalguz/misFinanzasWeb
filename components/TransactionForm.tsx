@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Transaction, TransactionType } from '../types';
 
 interface TransactionFormProps {
-  onSubmit: (transactionData: { description: string; amount: number }) => void;
+  onSubmit: (transactionData: { description: string; amount: number; type: TransactionType }) => void;
   onClose: () => void;
   transactionType: TransactionType;
   transactionToEdit?: Transaction | null;
@@ -17,17 +17,20 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 }) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
+  const [currentType, setCurrentType] = useState<TransactionType>(transactionType);
   const [errors, setErrors] = useState<{ description?: string; amount?: string }>({});
 
   useEffect(() => {
     if (transactionToEdit) {
       setDescription(transactionToEdit.description);
       setAmount(String(transactionToEdit.amount));
+      setCurrentType(transactionToEdit.type);
     } else {
       setDescription('');
       setAmount('');
+      setCurrentType(transactionType);
     }
-  }, [transactionToEdit]);
+  }, [transactionToEdit, transactionType]);
 
   const validate = () => {
     const newErrors: { description?: string; amount?: string } = {};
@@ -48,14 +51,33 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     onSubmit({
       description,
       amount: parseFloat(amount),
+      type: currentType,
     });
   };
   
-  const title = `${transactionToEdit ? 'Editar' : 'Añadir'} ${transactionType === TransactionType.INCOME ? 'Ingreso' : 'Gasto'}`;
+  const title = `${transactionToEdit ? 'Editar' : 'Añadir'} ${currentType === TransactionType.INCOME ? 'Ingreso' : 'Gasto'}`;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="text-lg font-medium leading-6 text-gray-900">{title}</h3>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <h3 className="text-xl font-semibold text-gray-800 text-center">{title}</h3>
+      
+      <div className="flex justify-center space-x-4 pt-2">
+        <button
+          type="button"
+          onClick={() => setCurrentType(TransactionType.INCOME)}
+          className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${currentType === TransactionType.INCOME ? 'bg-success text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+        >
+          Ingreso
+        </button>
+        <button
+          type="button"
+          onClick={() => setCurrentType(TransactionType.EXPENSE)}
+          className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${currentType === TransactionType.EXPENSE ? 'bg-danger text-white shadow-md' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+        >
+          Gasto
+        </button>
+      </div>
+
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
           Descripción
@@ -66,7 +88,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className={`w-full px-3 py-2 border ${errors.description ? 'border-danger' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary`}
-          placeholder={transactionType === TransactionType.INCOME ? 'Ej: Salario mensual' : 'Ej: Compra en supermercado'}
+          placeholder={currentType === TransactionType.INCOME ? 'Ej: Salario mensual' : 'Ej: Compra en supermercado'}
           autoFocus
         />
         {errors.description && <p className="text-danger text-sm mt-1">{errors.description}</p>}
@@ -89,7 +111,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         </div>
         {errors.amount && <p className="text-danger text-sm mt-1">{errors.amount}</p>}
       </div>
-      <div className="flex justify-end space-x-3 pt-2">
+      <div className="flex justify-end space-x-3 pt-4">
         <button
           type="button"
           onClick={onClose}
@@ -99,7 +121,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         </button>
         <button
           type="submit"
-          className={`px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${transactionType === TransactionType.INCOME ? 'bg-success hover:bg-green-700 focus:ring-success' : 'bg-danger hover:bg-red-700 focus:ring-danger'}`}
+          className={`px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${currentType === TransactionType.INCOME ? 'bg-success hover:bg-green-700 focus:ring-success' : 'bg-danger hover:bg-red-700 focus:ring-danger'}`}
         >
           {transactionToEdit ? 'Actualizar' : 'Añadir'}
         </button>

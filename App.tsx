@@ -210,7 +210,7 @@ const App: React.FC = () => {
         handleOpenModal('transaction');
     }, [handleOpenModal]);
 
-    const handleAddOrUpdateTransaction = useCallback((data: { description: string; amount: number }) => {
+    const handleAddOrUpdateTransaction = useCallback((data: { description: string; amount: number; type: TransactionType }) => {
         if (!selectedAccountId) return;
 
         setAccounts(prevAccounts => prevAccounts.map(acc => {
