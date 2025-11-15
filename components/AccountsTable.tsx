@@ -114,8 +114,7 @@ const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount
                         <th scope="col" className="relative px-6 py-3"><span className="sr-only">Acciones</span></th>
                     </tr>
                 </thead>
-                <SortableContext items={paginatedAccountIds} strategy={verticalListSortingStrategy}>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-gray-200">
                         {accounts.length === 0 ? (
                             <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500">No hay cuentas. ¡Crea una para empezar!</td></tr>
                         ) : (
@@ -132,7 +131,6 @@ const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount
                             ))
                         )}
                     </tbody>
-                </SortableContext>
             </table>
         </DndContext>
         {accounts.length > ACCOUNTS_PER_PAGE && (
