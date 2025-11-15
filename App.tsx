@@ -8,11 +8,11 @@ import AccountForm from './components/AccountForm';
 import TransactionForm from './components/TransactionForm';
 import { PlusIcon } from './components/icons';
 import { arrayMove } from '@dnd-kit/sortable';
+import ExportButton from './components/ExportButton';
 
 type AccountSortKey = 'name' | 'balance' | 'income' | 'expense';
 type TransactionSortKey = 'description' | 'amount' | 'date';
 type SortDirection = 'asc' | 'desc';
-
 const App: React.FC = () => {
     const handleExportData = () => {
         try {
@@ -326,13 +326,16 @@ const App: React.FC = () => {
                     <div>
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-semibold text-gray-700">Resumen de Cuentas</h2>
-                             <button
-                                onClick={() => handleOpenModal('account')}
-                                className="flex items-center space-x-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-secondary transition-colors shadow"
-                            >
-                                <PlusIcon className="w-5 h-5" />
-                                <span>Nueva Cuenta</span>
-                            </button>
+														<div className="flex items-center space-x-2">
+															<ExportButton accounts={accounts} />
+															<button
+																onClick={() => handleOpenModal('account')}
+																className="flex items-center space-x-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-secondary transition-colors shadow"
+														>
+																<PlusIcon className="w-5 h-5" />
+																<span>Nueva Cuenta</span>
+														</button>
+													</div>
                         </div>
                         <div className="mb-4">
                             <input
