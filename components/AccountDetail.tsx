@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Account, Transaction, TransactionType } from '../types';
-import { PlusIcon, PencilIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, GripVerticalIcon } from './icons';
+import { PlusIcon, PencilIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, GripVerticalIcon, EyeIcon, EyeSlashIcon, MinusIcon } from './icons';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -49,9 +49,9 @@ const SortableTransactionRow: React.FC<TransactionRowProps> = ({ transaction, on
             ref={setNodeRef} 
             style={style} 
             {...attributes}
-            className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-md transition-colors bg-white"
+            className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 hover:bg-gray-50 rounded-md transition-colors bg-white"
         >
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 mb-2 sm:mb-0">
                 <button {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600 p-1" aria-label="Reordenar transacción">
                     <GripVerticalIcon className="w-5 h-5" />
                 </button>
@@ -63,16 +63,18 @@ const SortableTransactionRow: React.FC<TransactionRowProps> = ({ transaction, on
                     <p className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                 </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 self-end sm:self-center">
                 <p className={`text-sm font-semibold ${isIncome ? 'text-success' : 'text-danger'}`}>
                     {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
                 </p>
-                <button onClick={() => onEdit(transaction)} className="text-gray-400 hover:text-accent transition-colors" aria-label={`Editar transacción ${transaction.description}`}>
-                    <PencilIcon className="w-4 h-4" />
-                </button>
-                <button onClick={() => onDelete(transaction.id)} className="text-gray-400 hover:text-danger transition-colors" aria-label={`Eliminar transacción ${transaction.description}`}>
-                    <TrashIcon className="w-4 h-4" />
-                </button>
+                <div className="flex items-center space-x-2">
+                    <button onClick={() => onEdit(transaction)} className="text-gray-400 hover:text-accent transition-colors" aria-label={`Editar transacción ${transaction.description}`}>
+                        <PencilIcon className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => onDelete(transaction.id)} className="text-gray-400 hover:text-danger transition-colors" aria-label={`Eliminar transacción ${transaction.description}`}>
+                        <TrashIcon className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
         </li>
     );
@@ -81,6 +83,7 @@ const SortableTransactionRow: React.FC<TransactionRowProps> = ({ transaction, on
 
 const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction, onEditTransaction, onDeleteTransaction, onReorderTransactions, onSearchTransactions, transactionSearchTerm }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [showAll, setShowAll] = useState(false);
   const TRANSACTIONS_PER_PAGE = 5;
 
   useEffect(() => {
@@ -111,9 +114,12 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
   };
 
   const paginatedTransactions = useMemo(() => {
+    if (showAll) {
+      return account?.transactions ?? [];
+    }
     const startIndex = (currentPage - 1) * TRANSACTIONS_PER_PAGE;
     return account?.transactions.slice(startIndex, startIndex + TRANSACTIONS_PER_PAGE) ?? [];
-  }, [account?.transactions, currentPage]);
+  }, [account?.transactions, currentPage, showAll]);
   
   const paginatedTransactionIds = useMemo(() => paginatedTransactions.map(t => t.id), [paginatedTransactions]);
 
@@ -141,8 +147,8 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
   return (
     <div className="bg-surface rounded-lg shadow-lg h-full flex flex-col">
       <div className="p-6 border-b border-gray-200">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-800">{account.name}</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2 sm:mb-0">{account.name}</h2>
           <div className="flex space-x-2">
             <button
               onClick={() => onAddTransaction(TransactionType.INCOME)}
@@ -153,10 +159,17 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
             </button>
             <button
               onClick={() => onAddTransaction(TransactionType.EXPENSE)}
-              className="flex items-center space-x-2 px-3 py-2 bg-danger text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
+              className="flex items-center space-x-2 px-3 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-secondary transition-colors"
             >
-              <PlusIcon className="w-4 h-4" />
+              <MinusIcon className="w-4 h-4" />
               <span>Gasto</span>
+            </button>
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="flex items-center space-x-2 px-3 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 transition-colors"
+            >
+              {showAll ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+              <span>{showAll ? 'Mostrar Paginado' : 'Mostrar Todo'}</span>
             </button>
           </div>
         </div>
@@ -187,7 +200,7 @@ const AccountDetail: React.FC<AccountDetailProps> = ({ account, onAddTransaction
                 </ul>
               </SortableContext>
             </DndContext>
-            {totalTransactions > TRANSACTIONS_PER_PAGE && (
+            {!showAll && totalTransactions > TRANSACTIONS_PER_PAGE && (
               <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
                 <button 
                   onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} 

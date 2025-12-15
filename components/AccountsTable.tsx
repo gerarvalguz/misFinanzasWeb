@@ -12,6 +12,7 @@ interface AccountsTableProps {
   onDeleteAccount: (accountId: string) => void;
   onReorderAccounts: (activeId: string, overId: string) => void;
   selectedAccountId: string | null;
+  showAll: boolean;
 }
 
 const formatCurrency = (amount: number) => {
@@ -63,14 +64,17 @@ const SortableAccountRow: React.FC<AccountRowProps> = ({ account, summary, isSel
 };
 
 
-const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount, onEditAccount, onDeleteAccount, onReorderAccounts, selectedAccountId }) => {
+const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount, onEditAccount, onDeleteAccount, onReorderAccounts, selectedAccountId, showAll }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const ACCOUNTS_PER_PAGE = 5;
 
   const paginatedAccounts = useMemo(() => {
+    if (showAll) {
+      return accounts;
+    }
     const startIndex = (currentPage - 1) * ACCOUNTS_PER_PAGE;
     return accounts.slice(startIndex, startIndex + ACCOUNTS_PER_PAGE);
-  }, [accounts, currentPage]);
+  }, [accounts, currentPage, showAll]);
 
   const calculateSummary = (account: Account) => {
     const income = account.transactions
@@ -133,7 +137,7 @@ const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount
                     </tbody>
             </table>
         </DndContext>
-        {accounts.length > ACCOUNTS_PER_PAGE && (
+        {!showAll && accounts.length > ACCOUNTS_PER_PAGE && (
           <div className="flex justify-between items-center p-4 bg-gray-50 border-t border-gray-200">
             <button 
               onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} 

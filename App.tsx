@@ -6,7 +6,7 @@ import AccountDetail from './components/AccountDetail';
 import Modal from './components/Modal';
 import AccountForm from './components/AccountForm';
 import TransactionForm from './components/TransactionForm';
-import { PlusIcon } from './components/icons';
+import { PlusIcon, EyeIcon, EyeSlashIcon } from './components/icons';
 import { arrayMove } from '@dnd-kit/sortable';
 import ExportButton from './components/ExportButton';
 
@@ -78,9 +78,9 @@ const App: React.FC = () => {
     const [modalContent, setModalContent] = useState<'account' | 'transaction' | null>(null);
 
     const [accountToEdit, setAccountToEdit] = useState<Account | null>(null);
-    const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
-    const [transactionTypeForForm, setTransactionTypeForForm] = useState<TransactionType>(TransactionType.EXPENSE);
-
+        const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+        const [transactionTypeForForm, setTransactionTypeForForm] = useState<TransactionType>(TransactionType.EXPENSE);
+        const [showAllAccounts, setShowAllAccounts] = useState(false);
     const selectedAccount = useMemo(() => {
         if (!selectedAccountId) return null;
         return accounts.find(acc => acc.id === selectedAccountId) || null;
@@ -300,7 +300,7 @@ const App: React.FC = () => {
         <div className="min-h-screen bg-background font-sans">
             <header className="bg-primary shadow-md">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-onPrimary">Mis Finanzas Web</h1>
+                    <h1 className="text-2xl font-bold text-onPrimary">Finanzas Personales</h1>
                      <div className="text-right">
                         <span className="text-sm text-blue-200">Balance Total</span>
                         <p className={`text-xl font-bold ${totalBalance >= 0 ? 'text-white' : 'text-red-300'}`}>
@@ -324,19 +324,24 @@ const App: React.FC = () => {
             <main className="container mx-auto p-4 sm:p-6 lg:p-8">
                  <div className="grid grid-cols-1 lg:grid-cols-[minmax(600px,_1.5fr)_1fr] gap-8">
                     <div>
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold text-gray-700">Resumen de Cuentas</h2>
+                        <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
+                            <h2 className="text-xl font-semibold text-gray-700 mb-2 sm:mb-0">Resumen de Cuentas</h2>
 														<div className="flex items-center space-x-2">
 															<ExportButton accounts={accounts} />
-															<button
-																onClick={() => handleOpenModal('account')}
-																className="flex items-center space-x-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-secondary transition-colors shadow"
-														>
-																<PlusIcon className="w-5 h-5" />
-																<span>Nueva Cuenta</span>
-														</button>
-													</div>
-                        </div>
+																													<button
+																															onClick={() => handleOpenModal('account')}
+																															className="flex items-center space-x-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-secondary transition-colors shadow"
+																													>
+																															<PlusIcon className="w-5 h-5" />
+																															<span>Nueva Cuenta</span>
+																													</button>
+																																											<button
+																																													onClick={() => setShowAllAccounts(!showAllAccounts)}
+																																													className="flex items-center space-x-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 transition-colors shadow"
+																																											>
+																																													{showAllAccounts ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+																																													<span>{showAllAccounts ? "Mostrar Paginado" : "Mostrar Todo"}</span>
+																																											</button>																												</div>                        </div>
                         <div className="mb-4">
                             <input
                                 type="text"
@@ -356,6 +361,7 @@ const App: React.FC = () => {
                             onSort={handleSortAccounts}
                             sortConfig={accountSortConfig}
                             calculateSummary={calculateAccountSummary}
+                            showAll={showAllAccounts}
                         />
                     </div>
                     <div>
