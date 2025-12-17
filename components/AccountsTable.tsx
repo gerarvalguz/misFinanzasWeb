@@ -137,6 +137,7 @@ const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount
                     </tbody>
             </table>
         </DndContext>
+        </div>
         {!showAll && accounts.length > ACCOUNTS_PER_PAGE && (
           <div className="flex justify-between items-center p-4 bg-gray-50 border-t border-gray-200">
             <button 
@@ -153,7 +154,6 @@ const AccountsTable: React.FC<AccountsTableProps> = ({ accounts, onSelectAccount
           </div>
         )}
       </div>
-    </div>
   );
 };
 
